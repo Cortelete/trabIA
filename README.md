@@ -1,0 +1,2 @@
+# trabIA
+Trabalho IA faculdade
