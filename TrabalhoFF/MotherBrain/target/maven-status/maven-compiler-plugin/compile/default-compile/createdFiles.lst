@@ -2,7 +2,10 @@ com\mycompany\motherbrain\InputLayer.class
 com\mycompany\motherbrain\Main.class
 com\mycompany\motherbrain\ActivationFunction.class
 com\mycompany\motherbrain\ExcelReader.class
+com\mycompany\motherbrain\Neuron$LinearFunction.class
 com\mycompany\motherbrain\Input.class
 com\mycompany\motherbrain\StepFunction.class
+com\mycompany\motherbrain\Neuron$ActivationFunction.class
+com\mycompany\motherbrain\Neuron$StepFunction.class
 com\mycompany\motherbrain\Neuron.class
 com\mycompany\motherbrain\LinearFunction.class

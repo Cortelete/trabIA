@@ -1,129 +1,97 @@
 package com.mycompany.motherbrain;
 
-import java.util.Arrays;
-import org.decimal4j.util.DoubleRounder;
-
 public class Neuron {
-    private double[] weights;
-    private double learningRate;
+    private double[] weights; // Pesos
+    private double bias; // Bias
+    private double learningRate; // Taxa de aprendizado
+    private String activationFunctionType; // Tipo de função de ativação
     private ActivationFunction activationFunction;
 
-    public Neuron(int inputSize, double learningRate, String activationType) {
+    // Construtor para inicializar os pesos e bias
+    public Neuron(int inputSize, double learningRate, String activationFunctionType) {
         this.weights = new double[inputSize];
         this.learningRate = learningRate;
-        this.weightInitialization();
-        this.activationInitialization(activationType);
+        this.activationFunctionType = activationFunctionType;
+        this.activationFunction = createActivationFunction(activationFunctionType);
+        weightInitialization();
     }
 
+    // Inicializa os pesos e o bias aleatoriamente
     private void weightInitialization() {
-        // Inicialização aleatória dos pesos entre -1 e 1
         for (int i = 0; i < weights.length; i++) {
-            weights[i] = Math.random() * 2 - 1;
+            weights[i] = Math.random() * 2 - 1; // Peso entre -1 e 1
         }
+        bias = Math.random() * 2 - 1; // Bias entre -1 e 1
     }
 
-    private void activationInitialization(String type) {
-        switch (type.toLowerCase()) {
-            case "linear":
-                this.activationFunction = new LinearFunction();
-                break;
-            case "step":
-                this.activationFunction = new StepFunction();
-                break;
-            default:
-                throw new IllegalArgumentException("Função de ativação desconhecida: " + type);
-        }
-    }
-
-    public double[] predict(double[][] inputs) {
-        double[] outputs = new double[inputs.length];
-        for (int i = 0; i < inputs.length; i++) {
-            outputs[i] = activationFunction.output(sumFunction(inputs[i]));
-        }
-        return outputs;
-    }
-
+    // Função de soma ponderada das entradas
     private double sumFunction(double[] inputs) {
-        if (inputs.length != weights.length) {
-            throw new IllegalArgumentException("Número de entradas não corresponde ao número de pesos.");
-        }
-        double sum = 0.0;
+        double sum = bias; // Incluindo o bias
         for (int i = 0; i < inputs.length; i++) {
             sum += inputs[i] * weights[i];
         }
         return sum;
     }
 
+    // Função de ativação (sigmoid ou linear)
+    private ActivationFunction createActivationFunction(String type) {
+        switch (type) {
+            case "sigmoid":
+                return new SigmoidFunction();
+            default:
+                return new LinearFunction();
+        }
+    }
+
+    // Função para prever a saída
+    public double predict(double[] inputs) {
+        return activationFunction.output(sumFunction(inputs));
+    }
+
+    // Treinamento da rede
     public void train(double[][] inputs, double[] expectedOutputs, int maxEpochs, double targetAccuracy) {
-        int epoch = 0;
-        double accuracy = 0.0;
-
-        while (epoch < maxEpochs && accuracy < targetAccuracy) {
+        for (int epoch = 0; epoch < maxEpochs; epoch++) {
+            double totalError = 0;
             for (int i = 0; i < inputs.length; i++) {
-                double output = activationFunction.output(sumFunction(inputs[i]));
+                double output = predict(inputs[i]);
                 double error = expectedOutputs[i] - output;
+                totalError += Math.pow(error, 2); // Calculando erro quadrático médio
 
-                // Atualização dos pesos usando gradiente descendente
+                // Atualizando os pesos
                 for (int j = 0; j < weights.length; j++) {
                     weights[j] += learningRate * error * inputs[i][j];
                 }
+                // Atualizando o bias
+                bias += learningRate * error;
             }
-            accuracy = calculateAccuracy(inputs, expectedOutputs);
-            epoch++;
-
-            if (Double.isNaN(accuracy)) {
-                System.out.println("Erro inesperado: acurácia resultou em NaN. Verifique os dados de entrada.");
+            // Imprime o erro médio a cada 1000 épocas
+            if (epoch % 1000 == 0) {
+                System.out.println("Epoch " + epoch + ": Error = " + totalError / inputs.length);
+            }
+            // Se o erro médio for abaixo do limiar, pare o treinamento
+            if (totalError / inputs.length <= targetAccuracy) {
+                System.out.println("Treinamento completo após " + epoch + " épocas.");
                 break;
             }
-            System.out.println("Época: " + epoch + ", Acurácia: " + DoubleRounder.round(accuracy * 100, 2) + "%");
         }
     }
 
-    private double calculateAccuracy(double[][] inputs, double[] expectedOutputs) {
-        int correctCount = 0;
-        for (int i = 0; i < inputs.length; i++) {
-            double predicted = activationFunction.output(sumFunction(inputs[i]));
-            if (Math.abs(predicted - expectedOutputs[i]) < 0.01) {
-                correctCount++;
-            }
-        }
-        return (double) correctCount / inputs.length;
-    }
-
-    // Função de ativação linear
-    static class LinearFunction implements ActivationFunction {
-        public double output(double x) {
-            return x;
-        }
-    }
-
-    // Função de ativação step (exemplo)
-    static class StepFunction implements ActivationFunction {
-        public double output(double x) {
-            return x >= 0 ? 1 : 0;
-        }
-    }
-
-    // Interface para funções de ativação
+    // Interface para as funções de ativação
     interface ActivationFunction {
         double output(double x);
     }
 
-    public static void main(String[] args) {
-        // Dados de treinamento: Fahrenheit para Kelvin
-        double[][] trainingData = {
-            {32}, {68}, {104}, {50}, {77}
-        };
-        double[] expectedOutputs = {
-            273.15, 293.15, 313.15, 283.15, 298.15
-        };
-
-        // Normalização dos dados para evitar problemas de escala
-        for (int i = 0; i < trainingData.length; i++) {
-            trainingData[i][0] = (trainingData[i][0] - 32) * 5 / 9; // Conversão para Celsius
+    // Função de ativação Sigmoid
+    static class SigmoidFunction implements ActivationFunction {
+        public double output(double x) {
+            return 1 / (1 + Math.exp(-x));
         }
+    }
 
-        Neuron neuron = new Neuron(1, 0.01, "linear");
-        neuron.train(trainingData, expectedOutputs, 10000, 0.99);
+    // Função de ativação Linear
+    static class LinearFunction implements ActivationFunction {
+        public double output(double x) {
+            return x;
+        }
     }
 }
