@@ -1,51 +1,53 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ */
 package com.mycompany.motherbrain;
 
 import java.util.ArrayList;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+/**
+ *
+ * @author willi
+ */
 public class Main {
 
     public static void main(String[] args) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Selecione o arquivo Excel");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Arquivo Excel", "xlsx", "xls"));
+        try {
+            // Cria o JFileChooser para selecionar o arquivo Excel
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Selecione o arquivo Excel desejado");
+            fileChooser.setFileFilter(new FileNameExtensionFilter("Arquivo Excel", "xlsx", "xls"));
 
-        int userSelection = fileChooser.showOpenDialog(null);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+            int userSelection = fileChooser.showOpenDialog(null);
 
-            // Inicializa o leitor de Excel e abre o arquivo
-            ExcelReader er = new ExcelReader();
-            er.open(filePath);
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                System.out.println("Arquivo selecionado: " + filePath);
 
-            // Obtém dados de entrada e saída
-            InputLayer inputLayer = er.getIl();
-            ArrayList<Double> outputList = er.getOl();
+                // Inicializa o ExcelReader e carrega o arquivo selecionado
+                ExcelReader er = new ExcelReader();
+                er.open(filePath); // Usa o caminho selecionado pelo usuário
 
-            // Converte dados de entrada para o formato double[][]
-            double[][] inputData = new double[inputLayer.getInputs().size()][];
-            for (int i = 0; i < inputLayer.getInputs().size(); i++) {
-                ArrayList<Double> inputValues = inputLayer.getInputs().get(i).getInput();
-                inputData[i] = new double[inputValues.size()];
+                InputLayer il = er.getIl(); // Obtém a camada de entrada
+                ArrayList<Double> y = er.getOl(); // Obtém as saídas esperadas
 
-                for (int j = 0; j < inputValues.size(); j++) {
-                    inputData[i][j] = inputValues.get(j);
-                }
+                // Criação do neurônio
+                Neuron n = new Neuron(il, 0.0000001, 97, y, Neuron.LINEAR, 305);
+                System.out.println("Treinamento do neurônio iniciado...");
+
+                // Executa o treinamento
+                Double weight = n.Training();
+                System.out.println("Pesos finais: " + weight);
+
+            } else {
+                System.out.println("Nenhum arquivo foi selecionado.");
             }
 
-            // Converte dados de saída para o formato double[]
-            double[] outputData = new double[outputList.size()];
-            for (int i = 0; i < outputList.size(); i++) {
-                outputData[i] = outputList.get(i);
-            }
-
-            // Inicializa o neurônio para regressão linear
-            Neuron neuron = new Neuron(inputData[0].length, 0.01, "linear");
-
-            // Treina o neurônio
-            neuron.train(inputData, outputData, 10000, 0.99);
-            System.out.println("Treinamento concluído.");
+        } catch (Exception e) {
+            System.err.println("Erro durante a execução: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

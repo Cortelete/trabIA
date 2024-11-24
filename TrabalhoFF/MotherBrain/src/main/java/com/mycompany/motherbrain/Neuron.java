@@ -1,97 +1,141 @@
 package com.mycompany.motherbrain;
 
+import java.util.ArrayList;
+import java.util.Objects;
+import org.decimal4j.util.DoubleRounder;
+
+/**
+ *
+ * @author will
+ */
 public class Neuron {
-    private double[] weights; // Pesos
-    private double bias; // Bias
-    private double learningRate; // Taxa de aprendizado
-    private String activationFunctionType; // Tipo de função de ativação
-    private ActivationFunction activationFunction;
 
-    // Construtor para inicializar os pesos e bias
-    public Neuron(int inputSize, double learningRate, String activationFunctionType) {
-        this.weights = new double[inputSize];
+    private InputLayer inputLayer;
+    private ArrayList<Double> weight;
+    private ActivationFunction function;
+    public final static String LINEAR = "LINEAR";
+    public final static String STEP = "STEP";
+    private double learningRate;
+    private double minimumAcuracy;
+    private ArrayList<Double> y;
+    private int bias;
+
+    // Construtor
+    public Neuron(InputLayer il, double learningRate, double minimumAcuracy, ArrayList<Double> y, String activationFunction, int bias) {
+        this.inputLayer = il;
         this.learningRate = learningRate;
-        this.activationFunctionType = activationFunctionType;
-        this.activationFunction = createActivationFunction(activationFunctionType);
-        weightInitialization();
+        this.weight = new ArrayList<>();
+        this.weightInitialization();
+        this.activationInitialization(activationFunction);
+        this.minimumAcuracy = minimumAcuracy;
+        this.y = y;
+        this.bias = bias;
     }
 
-    // Inicializa os pesos e o bias aleatoriamente
+    // Inicializa os pesos com valor 1.0
     private void weightInitialization() {
-        for (int i = 0; i < weights.length; i++) {
-            weights[i] = Math.random() * 2 - 1; // Peso entre -1 e 1
-        }
-        bias = Math.random() * 2 - 1; // Bias entre -1 e 1
-    }
-
-    // Função de soma ponderada das entradas
-    private double sumFunction(double[] inputs) {
-        double sum = bias; // Incluindo o bias
-        for (int i = 0; i < inputs.length; i++) {
-            sum += inputs[i] * weights[i];
-        }
-        return sum;
-    }
-
-    // Função de ativação (sigmoid ou linear)
-    private ActivationFunction createActivationFunction(String type) {
-        switch (type) {
-            case "sigmoid":
-                return new SigmoidFunction();
-            default:
-                return new LinearFunction();
+        for (Object il : this.inputLayer.getInputs()) {
+            this.weight.add(1.0);
         }
     }
 
-    // Função para prever a saída
-    public double predict(double[] inputs) {
-        return activationFunction.output(sumFunction(inputs));
-    }
+    // Treinamento do neurônio
+    public double Training() {
+        double accuracy = 0.0;
+        ArrayList<Double> outputs;
 
-    // Treinamento da rede
-    public void train(double[][] inputs, double[] expectedOutputs, int maxEpochs, double targetAccuracy) {
-        for (int epoch = 0; epoch < maxEpochs; epoch++) {
-            double totalError = 0;
-            for (int i = 0; i < inputs.length; i++) {
-                double output = predict(inputs[i]);
-                double error = expectedOutputs[i] - output;
-                totalError += Math.pow(error, 2); // Calculando erro quadrático médio
+        int iteration = 0; // Contador de iterações
+        while (true) {
+            iteration++;
+            System.out.println("Início da iteração: " + iteration);
 
-                // Atualizando os pesos
-                for (int j = 0; j < weights.length; j++) {
-                    weights[j] += learningRate * error * inputs[i][j];
+            outputs = new ArrayList<>();
+            for (int i = 0; i < this.inputLayer.getInputs().get(0).getInput().size(); i++) {
+                ArrayList<Double> row = new ArrayList<>();
+                for (int j = 0; j < this.inputLayer.getInputs().size(); j++) {
+                    row.add(this.inputLayer.getInputs().get(j).getInput().get(i));
                 }
-                // Atualizando o bias
-                bias += learningRate * error;
+
+                double sum = this.sumFunction(row);
+                double output = this.function.output(sum);
+                outputs.add(output);
             }
-            // Imprime o erro médio a cada 1000 épocas
-            if (epoch % 1000 == 0) {
-                System.out.println("Epoch " + epoch + ": Error = " + totalError / inputs.length);
+
+            // Calcula a precisão
+            accuracy = this.calculateAccuracy(outputs);
+            System.out.println("Precisão atual: " + accuracy + "%");
+
+            if (accuracy >= this.minimumAcuracy) {
+                System.out.println("Treinamento concluído após " + iteration + " iterações!");
+                return DoubleRounder.round(this.weight.get(0), 3);
             }
-            // Se o erro médio for abaixo do limiar, pare o treinamento
-            if (totalError / inputs.length <= targetAccuracy) {
-                System.out.println("Treinamento completo após " + epoch + " épocas.");
+
+            // Atualiza os pesos
+            double totalError = 0.0;
+            for (int i = 0; i < outputs.size(); i++) {
+                double output = outputs.get(i);
+                double target = this.y.get(i);
+                totalError += target - output;
+            }
+
+            double meanError = totalError / outputs.size();
+            System.out.println("Erro médio: " + meanError);
+
+            for (int j = 0; j < this.weight.size(); j++) {
+                double inputSum = 0.0;
+                for (int i = 0; i < outputs.size(); i++) {
+                    double input = this.inputLayer.getInputs().get(j).getInput().get(i);
+                    inputSum += input;
+                }
+
+                double meanInput = inputSum / outputs.size();
+                double newWeight = this.weight.get(j) + (this.learningRate * meanInput * meanError);
+                System.out.println("Peso atualizado [" + j + "]: " + newWeight);
+                this.weight.set(j, newWeight);
+            }
+
+            // Evitar loops infinitos para debug inicial
+            if (iteration > 10000) {
+                System.err.println("Treinamento interrompido por excesso de iterações.");
                 break;
             }
         }
+
+        return -1.0; // Retorno em caso de falha
     }
 
-    // Interface para as funções de ativação
-    interface ActivationFunction {
-        double output(double x);
+    // Função de soma
+    private double sumFunction(ArrayList<Double> inputs) {
+        double output = 0.0;
+        for (int i = 0; i < inputs.size(); i++) {
+            output += this.bias + (inputs.get(i) * this.weight.get(i));
+        }
+        return output;
     }
 
-    // Função de ativação Sigmoid
-    static class SigmoidFunction implements ActivationFunction {
-        public double output(double x) {
-            return 1 / (1 + Math.exp(-x));
+    // Inicializa a função de ativação
+    private void activationInitialization(String activationFunction) {
+        switch (activationFunction) {
+            case LINEAR -> this.function = new LinearFunction();
+            case STEP -> this.function = new StepFunction();
+            default -> {
+                System.out.println("Por favor, selecione uma função de ativação válida.");
+                System.exit(0);
+            }
         }
     }
 
-    // Função de ativação Linear
-    static class LinearFunction implements ActivationFunction {
-        public double output(double x) {
-            return x;
+    // Calcula a precisão
+    private double calculateAccuracy(ArrayList<Double> outputs) {
+        double correctPredictions = 0.0;
+        for (int i = 0; i < outputs.size(); i++) {
+            double targetRounded = DoubleRounder.round(this.y.get(i), 4);
+            double outputRounded = DoubleRounder.round(outputs.get(i), 4);
+
+            if (Objects.equals(targetRounded, outputRounded)) {
+                correctPredictions++;
+            }
         }
+        return (correctPredictions / outputs.size()) * 100;
     }
 }
