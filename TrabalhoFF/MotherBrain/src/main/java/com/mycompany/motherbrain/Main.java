@@ -34,7 +34,7 @@ public class Main {
                 ArrayList<Double> y = er.getOl(); // Obtém as saídas esperadas
 
                 // Criação do neurônio
-                Neuron n = new Neuron(il, 0.000001, 70, y, Neuron.LINEAR, 1);
+                Neuron n = new Neuron(il, 0.0000001, 90, y, Neuron.LINEAR, 305);
                 System.out.println("Treinamento do neurônio iniciado...");
 
                 // Executa o treinamento
