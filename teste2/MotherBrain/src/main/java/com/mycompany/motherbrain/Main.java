@@ -56,7 +56,7 @@ public class Main {
         ArrayList<Double> y = er.getOl();
 
         // Instancia e treina o neurônio
-        Neuron n = new Neuron(il, 0.0000001, 97, y, Neuron.LINEAR, 305);
+        Neuron n = new Neuron(il, 0.0000001, 80, y, Neuron.LINEAR, 305); // learningRate = 0.01, minimumAccuracy = 80%
         Double weight = n.Training();
 
         // Exibe os pesos treinados
