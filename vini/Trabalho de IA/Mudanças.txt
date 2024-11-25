@@ -1,0 +1,3 @@
+Adicionado o atributo Bias na classe neuronio
+Adicionado o atributo bias no construtor do neuronio
+bias é somado na função de soma
